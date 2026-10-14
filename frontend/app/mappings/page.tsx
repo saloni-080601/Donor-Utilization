@@ -24,7 +24,8 @@ export default function MappingsPage() {
 
   async function onSave(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
+    const formEl = e.currentTarget;          // capture before await
+    const form = new FormData(formEl);
     await api("/mappings", {
       method: "POST",
       body: JSON.stringify({
@@ -32,7 +33,7 @@ export default function MappingsPage() {
         budget_head: form.get("budget_head"),
       }),
     });
-    e.currentTarget.reset();
+    formEl.reset();
     load();
   }
 

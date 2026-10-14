@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Shell from "@/components/Shell";
 import { api, download } from "@/lib/api";
@@ -40,7 +40,7 @@ type Report = {
   }[];
 };
 
-export default function GrantDetailPage() {
+function GrantDetail() {
   const params = useParams<{ code: string }>();
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState("");
@@ -158,5 +158,13 @@ export default function GrantDetailPage() {
         </>
       )}
     </Shell>
+  );
+}
+
+export default function GrantDetailPage() {
+  return (
+    <Suspense fallback={<Shell><p className="text-sm text-[#5c675f]">Loading…</p></Shell>}>
+      <GrantDetail />
+    </Suspense>
   );
 }
