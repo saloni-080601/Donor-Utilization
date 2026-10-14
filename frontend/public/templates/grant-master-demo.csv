@@ -1,0 +1,6 @@
+code,name,donor_name,uc_format,approved_amount,start_date,end_date,campus_pool,central_pool,primary_location
+Donor A - Campus 1,Donor A - Campus 1,Donor A,Standard UC,6420000,2026-04-01,2027-03-31,CAMPUS-SUPPORT,CENTRAL-SUPPORT,Campus 1
+Donor A - Campus 2,Donor A - Campus 2,Donor A,Standard UC,4150000,2026-04-01,2027-03-31,CAMPUS-SUPPORT,CENTRAL-SUPPORT,Campus 2
+Donor B - Campus 3,Donor B - Campus 3,Donor B,Standard UC,5280000,2026-04-01,2027-03-31,CAMPUS-SUPPORT,CENTRAL-SUPPORT,Campus 3 + Campus 4
+Donor C - Alumni,Donor C - Alumni,Donor C,Standard UC,1800000,2026-04-01,2027-03-31,,CENTRAL-SUPPORT,Alumni programme
+OTHER-CENTRAL,Other grants in central pool (not in this sample),Various,Standard UC,9850000,2026-04-01,2027-03-31,,CENTRAL-SUPPORT,Other grants

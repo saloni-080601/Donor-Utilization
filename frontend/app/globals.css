@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f3eee3;
+  --ink: #1c2a22;
+  --green: #1f5c45;
+  --green-2: #2f7a5c;
+  --rule: #d7ccba;
+  --warn: #9a6700;
+  --alert: #9b2c2c;
+  --ok: #1f5c45;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+}
+
+.serif {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.panel {
+  background: #fffdf8;
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 0 rgba(28, 42, 34, 0.04);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+table.data th {
+  text-align: left;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5c675f;
+  font-weight: 600;
+  border-bottom: 1px solid var(--rule);
+  padding: 0.65rem 0.75rem;
+}
+
+table.data td {
+  border-bottom: 1px solid #efe8da;
+  padding: 0.7rem 0.75rem;
+  vertical-align: top;
+}
+
+table.data tr.overspent td {
+  background: #fdf2f2;
+}
+
+a.navlink {
+  color: #d7e4dc;
+}
+
+a.navlink.active,
+a.navlink:hover {
+  color: white;
+}
