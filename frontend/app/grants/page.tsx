@@ -26,8 +26,14 @@ export default function GrantsPage() {
   const [error, setError] = useState("");
   const [importMessage, setImportMessage] = useState("");
 
-  function load() {
-    api<Grant[]>("/grants").then(setGrants);
+  async function load() {
+    try {
+      const rows = await api<Grant[]>("/grants");
+      setGrants(rows);
+      setError("");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not load grants.");
+    }
   }
 
   useEffect(() => {
