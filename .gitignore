@@ -9,6 +9,7 @@ node_modules/
 .next/
 frontend/out/
 backend/*.egg-info/
+backend/*.db
 uploads/
 .pytest_cache/
 dist/

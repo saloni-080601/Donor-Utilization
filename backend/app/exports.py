@@ -17,6 +17,87 @@ NAVY = "1F5C45"
 INK = "1C2A22"
 
 
+def grant_master_excel(grants: list[dict], period: dict | None = None) -> bytes:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Grant Master"
+    headers = [
+        "Grant Code",
+        "Donor Name",
+        "Primary Location",
+        "Approved Amount",
+        "End Date",
+        "Campus Pool",
+        "Central Pool",
+        "Campus Support %",
+        "Central Support %",
+        "Reporting cycle",
+        "Next report due",
+    ]
+    header_fill = PatternFill("solid", fgColor=NAVY)
+    header_font = Font(color="FFFFFF", bold=True)
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    for column, header in enumerate(headers, start=1):
+        cell = ws.cell(1, column, header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+    first_row = 2
+    for offset, grant in enumerate(grants):
+        row_number = first_row + offset
+        values = [
+            grant["code"],
+            grant["donor_name"],
+            grant["primary_location"],
+            grant["approved_amount"],
+            grant.get("end_date"),
+            "Y" if grant.get("campus_pool") else "N",
+            "Y" if grant.get("central_pool") else "N",
+            f'=IF(F{row_number}="Y",D{row_number}/SUMIF($F${first_row}:$F${first_row + len(grants) - 1},"Y",$D${first_row}:$D${first_row + len(grants) - 1}),0)',
+            f'=IF(G{row_number}="Y",D{row_number}/SUMIF($G${first_row}:$G${first_row + len(grants) - 1},"Y",$D${first_row}:$D${first_row + len(grants) - 1}),0)',
+            grant.get("reporting_cycle"),
+            grant.get("next_report_due"),
+        ]
+        for column, value in enumerate(values, start=1):
+            cell = ws.cell(row_number, column, value)
+            cell.alignment = Alignment(vertical="center")
+            if column == 4:
+                cell.number_format = '₹#,##0.00'
+            elif column in {8, 9}:
+                cell.number_format = "0.00%"
+            elif column in {5, 11}:
+                cell.number_format = "dd-mmm-yyyy"
+
+    grant_row_count = len(grants)
+    check_row = first_row + grant_row_count
+    ws.cell(check_row, 1, "Check: shares add to 100%")
+    ws.cell(check_row, 8, f"=ROUND(SUM(H{first_row}:H{check_row - 1}),6)" if grant_row_count else 0)
+    ws.cell(check_row, 9, f"=ROUND(SUM(I{first_row}:I{check_row - 1}),6)" if grant_row_count else 0)
+    for column in range(1, 12):
+        ws.cell(check_row, column).fill = PatternFill("solid", fgColor="E7DFD2")
+        ws.cell(check_row, column).alignment = Alignment(vertical="center")
+    ws.cell(check_row, 1).font = Font(bold=True, color=INK)
+    ws.cell(check_row, 8).number_format = "0.00%"
+    ws.cell(check_row, 9).number_format = "0.00%"
+    note_row = check_row + 2
+    ws.cell(
+        note_row,
+        1,
+        "Allocation % = approved grant / total approved grants of the grants in that pool (assumed basis, to confirm with Finance).",
+    )
+    ws.cell(note_row, 1).font = Font(italic=True)
+    ws.cell(note_row, 1).alignment = Alignment(wrap_text=True)
+    widths = [18, 24, 20, 18, 15, 14, 14, 18, 18, 18, 18]
+    for column, width in enumerate(widths, start=1):
+        ws.column_dimensions[chr(64 + column)].width = width
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = f"A1:K{first_row + grant_row_count - 1}" if grant_row_count else "A1:K1"
+
+    output = io.BytesIO()
+    wb.save(output)
+    return output.getvalue()
+
+
 def excel_uc(grant: dict, statement: list[dict], bva: list[dict], period: dict) -> bytes:
     wb = Workbook()
     ws = wb.active

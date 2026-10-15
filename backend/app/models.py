@@ -15,7 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -50,6 +50,8 @@ class Grant(Base):
     campus_pool: Mapped[str] = mapped_column(String(80))
     central_pool: Mapped[str] = mapped_column(String(80))
     primary_location: Mapped[str] = mapped_column(String(80))
+    reporting_cycle: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    next_report_due: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     programme_lead_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     fcra: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -84,7 +86,7 @@ class BudgetHistory(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     grant_code: Mapped[str] = mapped_column(String(40), index=True)
-    snapshot: Mapped[dict] = mapped_column(JSONB)
+    snapshot: Mapped[dict] = mapped_column(JSON)
     changed_by: Mapped[str] = mapped_column(String(120))
     changed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     note: Mapped[str] = mapped_column(Text, default="")
@@ -123,8 +125,8 @@ class ImportRun(Base):
     uploaded_by: Mapped[str] = mapped_column(String(120))
     uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    blockers: Mapped[list] = mapped_column(JSONB, default=list)
-    warnings: Mapped[list] = mapped_column(JSONB, default=list)
+    blockers: Mapped[list] = mapped_column(JSON, default=list)
+    warnings: Mapped[list] = mapped_column(JSON, default=list)
 
     utilization_rows: Mapped[list["UtilizationRow"]] = relationship(cascade="all, delete-orphan")
     central_rows: Mapped[list["CentralCostRow"]] = relationship(cascade="all, delete-orphan")
@@ -175,7 +177,7 @@ class AuditLog(Base):
     actor: Mapped[str] = mapped_column(String(120))
     action: Mapped[str] = mapped_column(String(80))
     entity: Mapped[str] = mapped_column(String(80))
-    detail: Mapped[dict] = mapped_column(JSONB, default=dict)
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
 class CalendarItem(Base):
