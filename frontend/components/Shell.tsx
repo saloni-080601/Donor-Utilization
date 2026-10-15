@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { currentUser, type User } from "@/lib/api";
 
 const LINKS = [
@@ -15,7 +15,7 @@ const LINKS = [
   { href: "/audit",     label: "Audit Log",   emoji: "🔍", finance: true },
 ];
 
-export default function Shell({ children }: { children: React.ReactNode }) {
+function ShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -99,5 +99,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {/* ── Main content ─────────────────────────────────────── */}
       <main className="flex-1 min-w-0 px-8 py-8">{children}</main>
     </div>
+  );
+}
+
+export default function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="p-10 text-sm text-[#5c675f]">Loading...</div>}>
+      <ShellContent>{children}</ShellContent>
+    </Suspense>
   );
 }

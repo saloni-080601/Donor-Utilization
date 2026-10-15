@@ -24,6 +24,8 @@ def dump_grant(grant, include_children: bool = True) -> dict:
         "campus_pool": grant.campus_pool,
         "central_pool": grant.central_pool,
         "primary_location": grant.primary_location,
+        "reporting_cycle": grant.reporting_cycle,
+        "next_report_due": grant.next_report_due.isoformat() if grant.next_report_due else None,
         "programme_lead": grant.programme_lead.name if grant.programme_lead else None,
         "programme_lead_id": grant.programme_lead_id,
         "fcra": grant.fcra,
