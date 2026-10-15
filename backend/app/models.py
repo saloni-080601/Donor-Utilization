@@ -50,6 +50,8 @@ class Grant(Base):
     campus_pool: Mapped[str] = mapped_column(String(80))
     central_pool: Mapped[str] = mapped_column(String(80))
     primary_location: Mapped[str] = mapped_column(String(80))
+    reporting_cycle: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    next_report_due: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     programme_lead_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     fcra: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from .auth import create_token, get_current_user, require_finance, verify_password, visible_grant_codes
 from .config import settings
 from .database import Base, SessionLocal, engine, get_db
-from .exports import excel_uc, pdf_uc
+from .exports import excel_uc, grant_master_excel, pdf_uc
 from . import models
 from .money import format_inr, q2
 from .parsers import parse_central, parse_grants, parse_utilization
@@ -35,6 +35,14 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(bind=engine)
+    from sqlalchemy import inspect, text
+
+    columns = {column["name"] for column in inspect(engine).get_columns("grants")}
+    with engine.begin() as connection:
+        if "reporting_cycle" not in columns:
+            connection.execute(text("ALTER TABLE grants ADD COLUMN reporting_cycle VARCHAR(40)"))
+        if "next_report_due" not in columns:
+            connection.execute(text("ALTER TABLE grants ADD COLUMN next_report_due DATE"))
     db = SessionLocal()
     try:
         seed_if_empty(db)
@@ -180,6 +188,36 @@ def import_grants(
     audit(db, user.email, "import", "grant_master", {"codes": created, "filename": file.filename or ""})
     db.commit()
     return {"created": len(created), "codes": created}
+
+
+@app.get("/grants/export")
+def export_grants(
+    user: models.User = Depends(require_finance),
+    db: Session = Depends(get_db),
+):
+    grants = db.query(models.Grant).order_by(models.Grant.id).all()
+    data = grant_master_excel(
+        [
+            {
+                "code": grant.code,
+                "donor_name": grant.donor_name,
+                "primary_location": grant.primary_location,
+                "approved_amount": grant.approved_amount,
+                "start_date": grant.start_date,
+                "end_date": grant.end_date,
+                "campus_pool": grant.campus_pool,
+                "central_pool": grant.central_pool,
+                "reporting_cycle": grant.reporting_cycle,
+                "next_report_due": grant.next_report_due,
+            }
+            for grant in grants
+        ]
+    )
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="grant-master.xlsx"'},
+    )
 
 
 @app.get("/grants/{code}")

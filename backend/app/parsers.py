@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import calendar
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from openpyxl import load_workbook
@@ -24,14 +24,18 @@ def _to_decimal(value) -> Decimal:
         raise ValueError(f"Not a rupee amount: {value}") from exc
 
 
-def _grid_from_upload(filename: str, data: bytes) -> list[tuple]:
+def _grid_from_upload(filename: str, data: bytes, preferred_sheet: str | None = None) -> list[tuple]:
     name = filename.lower()
     if name.endswith(".csv"):
         text = data.decode("utf-8-sig")
         return list(csv.reader(io.StringIO(text)))
     if name.endswith(".xlsx"):
         workbook = load_workbook(io.BytesIO(data), data_only=True)
-        sheet = workbook.active
+        sheet = (
+            workbook[preferred_sheet]
+            if preferred_sheet and preferred_sheet in workbook.sheetnames
+            else workbook.active
+        )
         return list(sheet.iter_rows(values_only=True))
     raise ValueError("Use a .csv or .xlsx file.")
 
@@ -52,8 +56,8 @@ def _header_index(rows: list[tuple]) -> int:
     return 0
 
 
-def _rows_from_upload(filename: str, data: bytes) -> list[dict]:
-    rows = _grid_from_upload(filename, data)
+def _rows_from_upload(filename: str, data: bytes, preferred_sheet: str | None = None) -> list[dict]:
+    rows = _grid_from_upload(filename, data, preferred_sheet)
     if not rows:
         return []
 
@@ -94,8 +98,8 @@ def _to_date(value) -> date:
     raise ValueError(f"Not a supported date: {value}. Use YYYY-MM-DD.")
 
 
-def _period_start_from_upload(filename: str, data: bytes) -> date | None:
-    grid = _grid_from_upload(filename, data)
+def _period_start_from_upload(filename: str, data: bytes, preferred_sheet: str | None = None) -> date | None:
+    grid = _grid_from_upload(filename, data, preferred_sheet)
     for row in grid:
         if len(row) > 1 and _norm(row[0]) in {"period start", "start date"} and row[1] not in (None, ""):
             return _to_date(row[1])
@@ -119,17 +123,22 @@ def _pick_optional(row: dict, *aliases: str):
 
 
 def parse_grants(filename: str, data: bytes) -> list[dict]:
-    raw_rows = _rows_from_upload(filename, data)
+    raw_rows = _rows_from_upload(filename, data, "Grant Master")
     if not raw_rows:
         raise ValueError("Grant Master file has no grant rows.")
 
-    global_start = _period_start_from_upload(filename, data)
+    global_start = _period_start_from_upload(filename, data, "Grant Master")
     grants = []
     for row_number, raw in enumerate(raw_rows, start=2):
         code = _pick_optional(raw, "code", "grant code", "grant", "grant as in tally export", "grant (as in tally export)", "grant name")
         if code is None or not str(code).strip():
             continue
         code = str(code).strip()
+        if _norm(code).startswith("check:"):
+            continue
+        approved_value = _pick_optional(raw, "approved amount", "approved grant", "approved_amount", "amount")
+        if approved_value in (None, ""):
+            continue
         if _norm(code).startswith("other grants in central pool"):
             code = "OTHER-CENTRAL"
         name = str(
@@ -138,11 +147,14 @@ def parse_grants(filename: str, data: bytes) -> list[dict]:
             or code
         ).strip()
         donor = str(_pick(raw, "donor name", "donor", "donor_name")).strip()
-        amount = _to_decimal(_pick(raw, "approved amount", "approved grant", "approved_amount", "amount"))
+        amount = _to_decimal(approved_value)
+        end_value = _pick_optional(raw, "end date", "end_date", "grant end date")
         start_value = _pick_optional(raw, "start date", "start_date") or global_start
+        if start_value is None and end_value not in (None, ""):
+            end_date = _to_date(end_value)
+            start_value = date(end_date.year - 1, end_date.month, end_date.day) + timedelta(days=1)
         if start_value is None:
             raise ValueError(f"Grant row {row_number} needs a start_date or a Period start above the table.")
-        end_value = _pick_optional(raw, "end date", "end_date", "grant end date")
         location_value = _pick_optional(raw, "primary location", "location", "primary_location")
         location = str(location_value or ("Other" if code == "OTHER-CENTRAL" else "")).strip()
         if not location:
@@ -169,6 +181,10 @@ def parse_grants(filename: str, data: bytes) -> list[dict]:
                 "campus_pool": str(campus_pool or "").strip(),
                 "central_pool": str(central_pool or "").strip(),
                 "primary_location": location,
+                "reporting_cycle": str(_pick_optional(raw, "reporting cycle") or "").strip() or None,
+                "next_report_due": _to_date(_pick_optional(raw, "next report due"))
+                if _pick_optional(raw, "next report due") not in (None, "")
+                else None,
             }
         )
     if not grants:

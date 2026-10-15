@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import Shell from "@/components/Shell";
-import { api, currentUser } from "@/lib/api";
+import { api, currentUser, download } from "@/lib/api";
 
 type Grant = {
   code: string;
@@ -120,9 +120,15 @@ export default function GrantsPage() {
           {importMessage && <p className="mt-3 text-sm text-[#1f5c45]">{importMessage}</p>}
           {error && <p className="mt-3 text-sm text-[#9b2c2c]">{error}</p>}
           <div className="mt-4 border-t border-[#e7dfd2] pt-3 text-sm">
-            <span className="mr-3 text-[#5c675f]">Grant Master demo:</span>
-            <a className="mr-3 underline" href="/templates/grant-master-demo.xlsx" download>Excel</a>
-            <a className="underline" href="/templates/grant-master-demo.csv" download>CSV</a>
+            <span className="mr-3 text-[#5c675f]">Grant Master workbook:</span>
+            <button
+              type="button"
+              className="mr-3 underline"
+              onClick={() => download("/grants/export", "grant-master.xlsx")}
+            >
+              Download current Excel
+            </button>
+            <a className="mr-3 underline" href="/templates/grant-master-demo.xlsx" download>Download Excel template</a>
           </div>
         </section>
       )}
