@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Shell from "@/components/Shell";
@@ -30,92 +29,189 @@ type Summary = {
   grant_count: number;
 };
 
+function spendRatio(spend: string, approved: string): number {
+  const s = parseFloat(spend.replace(/,/g, ""));
+  const a = parseFloat(approved.replace(/,/g, ""));
+  if (!a || isNaN(s) || isNaN(a)) return 0;
+  return Math.min(s / a, 1);
+}
+
 export default function HomePage() {
   const [data, setData] = useState<Summary | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<Summary>("/reports/summary")
-      .then(setData)
-      .catch((e) => setError(e.message));
+    api<Summary>("/reports/summary").then(setData).catch((e) => setError(e.message));
   }, []);
+
+  const periodLabel = data?.run
+    ? `${data.run.period_start} → ${data.run.period_end}`
+    : null;
 
   return (
     <Shell>
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="serif text-3xl">All grants</h1>
-          <p className="text-sm text-[#5c675f] mt-1">
-            Spend, pace and exceptions against the latest Tally run. Amounts in INR.
-          </p>
-        </div>
-        {data?.run && (
-          <div className="text-right text-sm">
-            <div className="chip bg-[#1c2a22] text-white">{data.run.status}</div>
-            <div className="mt-1 text-[#5c675f]">
-              {data.run.period_start} → {data.run.period_end}
-            </div>
-          </div>
+      {/* ── Page header ──────────────────────────────────── */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">🏠 Dashboard</h1>
+        {periodLabel && (
+          <p className="text-sm text-slate-500 mt-1">Period: {periodLabel}</p>
         )}
       </div>
 
-      {error && <p className="mt-4 text-[#9b2c2c]">{error}</p>}
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {data && (
         <>
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="panel p-4">
-              <div className="text-xs uppercase tracking-widest text-[#5c675f]">Grants</div>
-              <div className="serif text-3xl mt-1">{data.grant_count}</div>
+          {/* ── Alert banners ──────────────────────────────── */}
+          {data.unmapped_ledgers > 0 && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm">
+              <span className="text-lg">⚠️</span>
+              <span>
+                <strong>{data.unmapped_ledgers}</strong> ledger(s) not mapped yet —{" "}
+                <Link href="/mappings" className="underline font-semibold text-amber-900">
+                  go to Mappings to fix
+                </Link>
+              </span>
             </div>
-            <div className="panel p-4">
-              <div className="text-xs uppercase tracking-widest text-[#5c675f]">Unmapped ledgers</div>
-              <div className="serif text-3xl mt-1">{data.unmapped_ledgers}</div>
+          )}
+          {data.run?.status === "blocked" && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+              <span className="text-lg">🚫</span>
+              <span>
+                Latest upload has errors —{" "}
+                <Link href="/uploads" className="underline font-semibold text-red-900">
+                  go to Upload Data to fix
+                </Link>
+              </span>
             </div>
-            <div className="panel p-4">
-              <div className="text-xs uppercase tracking-widest text-[#5c675f]">Open exceptions</div>
-              <div className="serif text-3xl mt-1">{data.exceptions.length}</div>
+          )}
+
+          {/* ── Stat cards ─────────────────────────────────── */}
+          <div className="grid grid-cols-3 gap-4 mb-8">
+
+            {/* Total Grants */}
+            <div className="rounded-xl bg-blue-600 text-white p-5 shadow-md">
+              <div className="text-2xl mb-2">🎯</div>
+              <div className="text-xs font-semibold uppercase tracking-widest text-blue-200 mb-1">
+                Total Grants
+              </div>
+              <div className="text-4xl font-bold">{data.grant_count}</div>
+            </div>
+
+            {/* Open Issues */}
+            <div className={[
+              "rounded-xl text-white p-5 shadow-md",
+              data.exceptions.length > 0 ? "bg-orange-500" : "bg-green-600",
+            ].join(" ")}>
+              <div className="text-2xl mb-2">⚠️</div>
+              <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">
+                Open Issues
+              </div>
+              <div className="text-4xl font-bold">{data.exceptions.length}</div>
+            </div>
+
+            {/* Data Period */}
+            <div className="rounded-xl bg-slate-700 text-white p-5 shadow-md">
+              <div className="text-2xl mb-2">📊</div>
+              <div className="text-xs font-semibold uppercase tracking-widest text-slate-300 mb-1">
+                Data Period
+              </div>
+              <div className="text-base font-semibold leading-snug">
+                {periodLabel ?? "No data yet"}
+              </div>
             </div>
           </div>
 
-          <div className="panel mt-6 overflow-x-auto">
-            <table className="data w-full text-sm">
-              <thead>
-                <tr>
-                  <th>Grant</th>
-                  <th>Donor</th>
-                  <th>Approved</th>
-                  <th>Spend</th>
-                  <th>Balance</th>
-                  <th>Pace</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.grants.map((g) => (
-                  <tr key={g.code} className={g.overspent_heads ? "overspent" : ""}>
-                    <td>
-                      <div className="font-medium">{g.code}</div>
-                      <div className="text-[#5c675f]">{g.name}</div>
-                    </td>
-                    <td>{g.donor_name}</td>
-                    <td className="num">{g.approved_inr}</td>
-                    <td className="num">{g.spend_inr}</td>
-                    <td className="num">{g.balance_inr}</td>
-                    <td>
-                      <span className={`chip ${g.behind ? "bg-[#f6e6c5] text-[#9a6700]" : "bg-[#e4efe8] text-[#1f5c45]"}`}>
-                        {g.pace.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td>
-                      <Link className="text-[#1f5c45] underline" href={`/grants/${g.code}`}>
-                        Statement
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* ── Grant cards grid ───────────────────────────── */}
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-400 mb-3">
+            All Grants
+          </h2>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            {data.grants.map((g) => {
+              const borderColor = g.overspent_heads > 0
+                ? "#dc2626"   /* red   */
+                : g.behind
+                ? "#d97706"   /* amber */
+                : "#2563eb";  /* blue  */
+
+              const ratio = spendRatio(g.spend_inr, g.approved_inr);
+              const pctLabel = `${(ratio * 100).toFixed(0)}% used`;
+
+              return (
+                <div
+                  key={g.code}
+                  className="grant-card"
+                  style={{ borderLeftColor: borderColor }}
+                >
+                  {/* Card header */}
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div>
+                      <div className="font-bold text-base text-slate-800 leading-tight">
+                        {g.name}
+                      </div>
+                      <div className="text-xs text-slate-400 mt-0.5">{g.donor_name}</div>
+                    </div>
+                    <span className={[
+                      "chip shrink-0 mt-0.5",
+                      g.overspent_heads > 0
+                        ? "bg-red-100 text-red-700"
+                        : g.behind
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-green-100 text-green-700",
+                    ].join(" ")}>
+                      {g.overspent_heads > 0 ? "Overspent" : g.pace.replace("_", " ")}
+                    </span>
+                  </div>
+
+                  {/* Approved */}
+                  <div className="text-[10px] uppercase tracking-widest text-slate-400 mb-0.5">
+                    Approved
+                  </div>
+                  <div className="num text-xl font-bold text-slate-800 mb-3">
+                    ₹{g.approved_inr}
+                  </div>
+
+                  {/* Spend & Balance */}
+                  <div className="flex gap-6 mb-2 text-sm">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-slate-400">Spent</div>
+                      <div className="num font-semibold text-slate-700">₹{g.spend_inr}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-slate-400">Balance</div>
+                      <div className="num font-semibold text-slate-700">₹{g.balance_inr}</div>
+                    </div>
+                    <div className="ml-auto text-right">
+                      <div className="text-[10px] uppercase tracking-widest text-slate-400">Used</div>
+                      <div className="text-xs font-bold text-slate-600">{pctLabel}</div>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="progress-bar-track mb-4">
+                    <div
+                      className="progress-bar-fill"
+                      style={{
+                        width: `${(ratio * 100).toFixed(1)}%`,
+                        background: g.overspent_heads > 0 ? "#dc2626" : g.behind ? "#d97706" : "#2563eb",
+                      }}
+                    />
+                  </div>
+
+                  {/* Footer */}
+                  <Link
+                    href={`/grants/${g.code}`}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                  >
+                    View Report →
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         </>
       )}
